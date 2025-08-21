@@ -1,103 +1,56 @@
-import os
-import pickle
-import yaml
-import logging
+import numpy as np
 import pandas as pd
-from sklearn.ensemble import GradientBoostingClassifier
-
-# ----------------- Logging Setup -----------------
-logger = logging.getLogger("model-building")
-logger.setLevel(logging.DEBUG)
-
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-
-file_handler = logging.FileHandler("model_building.log")
-file_handler.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-console_handler.setFormatter(formatter)
-file_handler.setFormatter(formatter)
-
-if not logger.hasHandlers():
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
+import pickle
+import json
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 
 
-# ----------------- Load Params -----------------
-def load_params(params_path: str) -> dict:
-    """Load parameters from params.yaml"""
-    try:
-        with open(params_path, "r") as f:
-            params = yaml.safe_load(f)
-        model_params = params.get("model_building", {})
-        logger.debug(f"✅ Parameters loaded: {model_params}")
-        return model_params
-    except FileNotFoundError:
-        logger.error("❌ params.yaml not found.")
-        raise
-    except yaml.YAMLError as e:
-        logger.error(f"❌ Error parsing params.yaml: {e}")
-        raise
+def evaluate_model(model_path: str, test_data_path: str, output_metrics_path: str = "metrics.json"):
+    """
+    Evaluate a trained model on test data and save evaluation metrics.
+    
+    Parameters:
+        model_path (str): Path to the saved model (pickle file).
+        test_data_path (str): Path to the test dataset (CSV file).
+        output_metrics_path (str): Path where metrics will be saved as JSON.
+    """
+    
+    # Load model
+    with open(model_path, "rb") as f:
+        clf = pickle.load(f)
 
+    # Load test data
+    test_data = pd.read_csv(test_data_path)
 
-# ----------------- Load Data -----------------
-def load_training_data(train_path: str):
-    """Load training data from CSV"""
-    try:
-        logger.info(f"Loading training data from {train_path}")
-        train_data = pd.read_csv(train_path)
+    # Split features and labels
+    X_test = test_data.iloc[:, :-1].values
+    y_test = test_data.iloc[:, -1].values
 
-        X_train = train_data.iloc[:, :-1].values
-        y_train = train_data.iloc[:, -1].values
-        logger.info(f"✅ Training data shape: {train_data.shape}")
-        return X_train, y_train
-    except Exception as e:
-        logger.error(f"❌ Failed to load training data: {e}")
-        raise
+    # Predictions
+    y_pred = clf.predict(X_test)
+    y_pred_proba = clf.predict_proba(X_test)[:, 1]
 
+    # Calculate metrics
+    metrics_dict = {
+        "accuracy": accuracy_score(y_test, y_pred),
+        "precision": precision_score(y_test, y_pred),
+        "recall": recall_score(y_test, y_pred),
+        "auc": roc_auc_score(y_test, y_pred_proba)
+    }
 
-# ----------------- Train Model -----------------
-def train_model(X_train, y_train, params: dict):
-    """Train GradientBoosting model"""
-    try:
-        logger.info("Training GradientBoostingClassifier model...")
-        clf = GradientBoostingClassifier(
-            n_estimators=params.get("n_estimators", 100),
-            learning_rate=params.get("learning_rate", 0.1)
-        )
-        clf.fit(X_train, y_train)
-        logger.info("✅ Model training completed")
-        return clf
-    except Exception as e:
-        logger.error(f"❌ Training failed: {e}")
-        raise
+    # Save metrics
+    with open(output_metrics_path, "w") as f:
+        json.dump(metrics_dict, f, indent=4)
 
-
-# ----------------- Save Model -----------------
-def save_model(model, model_path: str):
-    """Save model using pickle"""
-    try:
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
-        with open(model_path, "wb") as f:
-            pickle.dump(model, f)
-        logger.info(f"✅ Model saved at {model_path}")
-    except Exception as e:
-        logger.error(f"❌ Failed to save model: {e}")
-        raise
-
-
-# ----------------- Main -----------------
-def main():
-    try:
-        params = load_params("params.yaml")
-        X_train, y_train = load_training_data("data/features/train_bow.csv")
-        model = train_model(X_train, y_train, params)
-        save_model(model, "models/model.pkl")
-        logger.info("🎯 Model building pipeline completed successfully.")
-    except Exception as e:
-        logger.critical(f"🔥 Pipeline failed: {e}")
+    return metrics_dict
 
 
 if __name__ == "__main__":
-    main()
+    # Correct paths (match with model_building.py and dvc.yaml)
+    model_file = "models/model.pkl"
+    test_file = "data/features/test_bow.csv"
+    metrics_file = "metrics.json"
+
+    results = evaluate_model(model_file, test_file, metrics_file)
+    print("Evaluation Metrics:", results)
+

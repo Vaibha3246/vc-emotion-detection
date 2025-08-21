@@ -7,7 +7,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 # ----------------------------------
 # Logging setup
 # ----------------------------------
-logger = logging.getLogger("feature-engineering")
+logger = logging.getLogger("feature_engineering")
 logger.setLevel(logging.DEBUG)
 
 # Console handler
@@ -37,7 +37,7 @@ def load_params(params_path: str) -> int:
     try:
         with open(params_path, "r") as f:
             params = yaml.safe_load(f)
-        max_features = params["feature-engineering"]["max_features"]
+        max_features = params["feature_engineering"]["max_features"]
         logger.debug(f"✅ max_features retrieved: {max_features}")
         return max_features
     except FileNotFoundError:
@@ -47,7 +47,7 @@ def load_params(params_path: str) -> int:
         logger.error(f"❌ YAML parsing error: {e}")
         raise
     except KeyError:
-        logger.error("❌ Missing key: 'feature-engineering -> max_features' in params.yaml")
+        logger.error("❌ Missing key: 'feature_engineering -> max_features' in params.yaml")
         raise
 
 

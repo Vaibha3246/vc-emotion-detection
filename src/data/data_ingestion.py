@@ -8,15 +8,15 @@ from sklearn.model_selection import train_test_split
 # ----------------------------------
 # Logging setup
 # ----------------------------------
-logger = logging.getLogger('data-injection')
-logger.setLevel(logging.DEBUG)  # ✅ Use constant, not string
- 
+logger = logging.getLogger('data_ingestion')  # fixed spelling
+logger.setLevel(logging.DEBUG)
+
 # Console handler
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.DEBUG)
 
 # Optional: File handler
-file_handler = logging.FileHandler('data_injection.log')
+file_handler = logging.FileHandler('data_ingestion.log')
 file_handler.setLevel(logging.DEBUG)
 
 # Formatter
@@ -24,10 +24,10 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 console_handler.setFormatter(formatter)
 file_handler.setFormatter(formatter)
 
-# Add handlers (avoid adding multiple times)
 if not logger.hasHandlers():
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
+
 
 # ----------------------------------
 # Functions
@@ -38,7 +38,7 @@ def load_params(params_path: str) -> float:
     try:
         with open(params_path, 'r') as file:
             params = yaml.safe_load(file)
-        test_size = params['data-injection']['test_size']
+        test_size = params['data_ingestion']['test_size']  # ✅ corrected key
         logger.debug(f"✅ test_size retrieved: {test_size}")
         return test_size
     except FileNotFoundError:
@@ -48,8 +48,9 @@ def load_params(params_path: str) -> float:
         logger.error(f'❌ YAML parsing error: {e}')
         raise
     except KeyError:
-        logger.error("❌ Missing key: 'data-injection -> test_size' in params.yaml")
+        logger.error("❌ Missing key: 'data_ingestion -> test_size' in params.yaml")
         raise
+
 
 def load_data(url: str) -> pd.DataFrame:
     """Load dataset from URL."""
@@ -60,6 +61,7 @@ def load_data(url: str) -> pd.DataFrame:
     except Exception as e:
         logger.error(f"❌ Error loading data from URL: {e}")
         raise
+
 
 def processed_data(df: pd.DataFrame) -> pd.DataFrame:
     """Clean and filter data for sentiment analysis."""
@@ -73,11 +75,11 @@ def processed_data(df: pd.DataFrame) -> pd.DataFrame:
         logger.error(f"❌ Expected column missing: {e}")
         raise
 
+
 def save_data(train_data: pd.DataFrame, test_data: pd.DataFrame, data_path: str) -> None:
     """Save the split data into CSV files."""
     try:
-        data_path = os.path.join('data', 'raw')
-        os.makedirs(data_path, exist_ok=True)
+        os.makedirs(data_path, exist_ok=True)   # ✅ now uses argument
         train_data.to_csv(os.path.join(data_path, 'train.csv'), index=False)
         test_data.to_csv(os.path.join(data_path, 'test.csv'), index=False)
         logger.debug("✅ Data saved successfully.")
@@ -85,16 +87,18 @@ def save_data(train_data: pd.DataFrame, test_data: pd.DataFrame, data_path: str)
         logger.error(f"❌ Failed to save data: {e}")
         raise
 
+
 def main():
     try:
         test_size = load_params('params.yaml')
         df = load_data('https://raw.githubusercontent.com/campusx-official/jupyter-masterclass/main/tweet_emotions.csv')
         final_df = processed_data(df)
         train_data, test_data = train_test_split(final_df, test_size=test_size, random_state=42)
-        save_data(train_data, test_data, data_path='data')
+        save_data(train_data, test_data, data_path='data/raw')  # ✅ pass correct folder
         logger.info("✅ Data pipeline completed successfully.")
     except Exception as e:
         logger.critical(f"🔥 Pipeline failed: {e}")
+
 
 if __name__ == '__main__':
     main()
