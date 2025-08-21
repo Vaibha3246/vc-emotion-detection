@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # Correct paths (match with model_building.py and dvc.yaml)
     model_file = "models/model.pkl"
     test_file = "data/features/test_bow.csv"
-    metrics_file = "metrics.json"
+    metrics_file = "reports/metrics.json"
 
     results = evaluate_model(model_file, test_file, metrics_file)
     print("Evaluation Metrics:", results)
